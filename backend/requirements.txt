@@ -1,0 +1,36 @@
+# Core web framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+
+# Settings management
+pydantic-settings==2.8.0
+
+# PDF parsing
+PyMuPDF==1.25.3
+
+# Sentence splitting
+nltk==3.9.1
+
+# Embeddings — Local Sentence Transformers
+huggingface-hub==0.36.2
+sentence-transformers>=3.0.0
+
+# Reranking — Cohere API
+cohere>=5.0.0
+
+# Vector search (pure C++, no torch dependency)
+faiss-cpu==1.10.0
+
+# Keyword search
+rank-bm25==0.2.2
+
+# LLM
+groq==0.18.0
+
+# Observability
+langsmith==0.3.11
+
+# Numerical computing
+numpy==2.2.3
+google-genai==0.3.0
