@@ -103,3 +103,5 @@ Icon
 .vscode/
 *.swp
 *.swo
+
+/extras
