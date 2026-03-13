@@ -162,7 +162,7 @@ Access the application at http://localhost:3000
 ## 9. Challenges & Solutions
 
 *   **Hallucination on Out-of-Scope Queries:** Implemented a confidence gate using the Cohere cross-encoder relevance score. If the score is below a threshold, the system returns a "not found" response, bypassing the LLM completely to prevent hallucinations.
-*   **Exact-Match Retrieval Failures:** Dense retrieval often misses specific names or values. Integrated BM25 keyword search with FAISS semantic search using Reciprocal Rank Fusion (RRF), improving exact-match recall@5 from ~84% to 93%+.
+*   **Exact-Match Retrieval Failures:** Dense retrieval often misses specific names or values. Integrated BM25 keyword search with FAISS semantic search using Reciprocal Rank Fusion (RRF).
 *   **Conversational Context Loss:** Follow-up questions often lack explicit context. Implemented a sliding-window chat memory that automatically stores and injects the last 6 human/assistant message pairs into the prompt, enabling seamless multi-turn conversations.
 
 ## 10. Future Improvements
