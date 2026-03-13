@@ -9,7 +9,7 @@
 - [Tech Stack](#6-tech-stack)
 - [Project Structure](#7-project-structure)
 - [Installation](#8-how-to-run-the-app)
-- [Challenges I Faced](#9-challenges-faced--solutions)
+- [Challenges Faced](#9-challenges-faced)
 - [Future Improvements](#10-future-improvements)
 
 ## 1. Introduction
@@ -159,7 +159,7 @@ npm run dev
 ```
 Access the application at http://localhost:3000
 
-## 9. Challenges & Solutions
+## 9. Challenges faced
 
 *   **Hallucination on Out-of-Scope Queries:** Implemented a confidence gate using the Cohere cross-encoder relevance score. If the score is below a threshold, the system returns a "not found" response, bypassing the LLM completely to prevent hallucinations.
 *   **Exact-Match Retrieval Failures:** Dense retrieval often misses specific names or values. Integrated BM25 keyword search with FAISS semantic search using Reciprocal Rank Fusion (RRF).
