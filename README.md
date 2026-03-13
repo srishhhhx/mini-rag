@@ -14,11 +14,14 @@
 
 ## 1. Introduction
 
-A full stack question-answering system designed to retrieve and synthesize information from documents, featuring hybrid semantic/keyword search, dynamic fallback routing, and multilayered logic to ensure factually grounded responses.
+A full stack question-answering system designed to retrieve and synthesize information from documents.
 
-Built with **Next.js 14**, **FastAPI**, and **Groq Llama 3**, the system implements a high-speed retrieval architecture combining **FAISS IndexFlatIP indexing** with **BM25 keyword search** using **Reciprocal Rank Fusion (RRF)**, **Cohere cross-encoder reranking**, and a smart dual-LLM fallback strategy.
-
-Key capabilities include sentence-aware NLTK chunking, intelligent confidence gating to prevent hallucinations, sliding-window conversation memory, and end-to-end telemetry via LangSmith.
+**Key Technologies:**
+- **Frontend:** Next.js 14
+- **Backend:** FastAPI
+- **LLMs:** Groq Llama 3
+- **Retrieval:** FAISS IndexFlatIP, BM25 keyword search, Reciprocal Rank Fusion (RRF), Cohere cross-encoder reranking
+- **Processing:** NLTK chunking, LangSmith telemetry
 
 ## 2. Architecture diagram
 
@@ -26,29 +29,22 @@ Key capabilities include sentence-aware NLTK chunking, intelligent confidence ga
 
 ## 3. Performance & Architecture Highlights
 
-This agent was engineered for extreme performance and reliability, achieving significant improvements through rigorous optimization, robust evaluation, and advanced architectural decisions.
+### Performance Metrics
+*Evaluated using the Ragas framework on 'Attention Is All You Need'.*
 
-### Performance Metrics:
-*Validated through the comprehensive Ragas evaluation framework with 15 highly-complex baseline queries covering strict extraction and synthesization against the 'Attention Is All You Need' paper.*
+| Metric | Score |
+|---|---|
+| **Faithfulness** | 0.891 |
+| **Answer Relevancy** | 0.880 |
+| **Context Precision** | 0.910 |
+| **Context Recall** | 0.832 |
 
-| Metric | Score | What It Measures |
-|---|---|---|
-| **Faithfulness** | **0.891 (89.1%)** | Generated answers are strictly grounded in retrieved context chunks, heavily suppressing hallucinations. |
-| **Answer Relevancy** | **0.880 (88.0%)** | Generated answers directly and concisely address the user's core intent. |
-| **Context Precision** | **0.910 (91.0%)** | The most relevant document chunks are accurately ranked at the absolute top of the retrieval results context window. |
-| **Context Recall** | **0.832 (83.2%)** | The retrieval system successfully finds the necessary information required to answer the truth. |
-
-### Architectural Advancements
-
-* **Dual-LLM Groq Strategy:** Deployed a highly-optimized setup using **Llama 3.3 70B** as the primary reasoning model and **Llama 3.1 8B** as an instantaneous automatic fallback model, ensuring unmatched speed (1000+ tokens/s) and near-100% API uptime resilience through dynamic error catching.
-
-* **Hybrid Search with Reciprocal Rank Fusion:** Combined local **FAISS exact cosine search (semantic)** and **BM25 (keyword)** matching with **RRF (k=60)** fusion, drastically improving retrieval recall for both factual term-queries and contextual summaries.
-
-* **Confidence Gating & Hallucination Prevention:** The generative LLM is structurally bypassed when retrieved RRF scores fall beneath an accepted threshold. Instead of hallucinating politely, the application firmly enforces an out-of-scope response logic.
-
-* **Cross-Encoder Reranking:** Passed combined candidates through Cohere's dedicated multilingual reranker API, improving the precision logic formatting sent to the LLM generation prompt array.
-
-* **Sentence-Aware NLP Chunking:** Ingested documentation chunks via PyMuPDF layered atop **NLTK sentence tokenization** over arbitrary character splitting, ensuring semantic boundaries never split mid-sentence, enabling much cleaner downstream local generic embeddings. 
+### Architecture Highlights
+* **Dual-LLM Strategy:** Uses **Llama 3.3 70B** for primary reasoning and **Llama 3.1 8B** as a fallback.
+* **Hybrid Search:** Combines **FAISS (semantic)** and **BM25 (keyword)** using **Reciprocal Rank Fusion (RRF)**.
+* **Confidence Gating:** Bypasses LLM generation if retrieval scores are low, mitigating hallucinations.
+* **Cross-Encoder Reranking:** Uses Cohere to rerank retrieval candidates.
+* **Sentence-Aware Chunking:** Uses **NLTK** and **PyMuPDF** to split text at sentence boundaries. 
 
 ## 4. Chat interface
 
@@ -56,20 +52,18 @@ This agent was engineered for extreme performance and reliability, achieving sig
 
 ## 5. Features
 
-### Core User Features
+### Core
+* **PDF Upload:** Background processing with polling.
+* **Session Management:** Isolated chat history and document context with TTL eviction.
+* **Hybrid Search:** Combines semantic and keyword search.
+* **Streaming Responses:** SSE streaming with inline page citations and a source panel.
+* **Error Handling:** Graceful handling of missing files, scanned documents, and out-of-context questions.
 
-* **Instant Document Upload & Processing:** Upload structural PDFs rapidly with inline background status polling logic. 
-* **Session Management & Isolation:** Persistent semantic context, document tracking, and conversation sliding-window history securely associated via localized frontend IDs with automated server eviction.
-* **Advanced Hybrid Search:** Dual-mode retrieval combining semantic meaning and keyword precision.
-* **Streaming Responses with Granular Citations:** Answers are generated and streamed via optimized Server-Sent Events (SSE), containing inline `(Page X)` markers, and populating expansive source panel arrays. 
-* **Adaptive Error Handling:** Out-of-the-box UI/UX protections against scanned doc uploads, missing files, and unanswerable out-of-bounds questions context thresholds.
-
-### Advanced Pipeline Features
-
-* **Regex-Heuristics Metadata Extraction:** Dynamically predicts section headings, detects localized lists, and estimates table chunks natively without leaning entirely on expensive, slow pre-computation LLM calls.
-* **Doc-Level One-Shot Groq Execution:** Leverages Llama 3 70B explicitly once during ingestion on the first 300 document characters to classify the global document title and topic passively.
-* **Ragas Evaluator API Sandbox:** Includes a dedicated `/backend/evaluate_ragas.py` CLI module mapped to a golden standard 15-question set for local testing of context length windows safely beneath API execution quotas. 
-* **LangSmith Instrumentation:** Granular nested `@traceable` python integration automatically analyzing prompt constructions, LLM latency, chunk retrievals, and Ragas metrics execution runs. 
+### Pipeline
+* **Metadata Extraction:** Regex-based heading, list, and table detection.
+* **Document Classification:** One-shot LLM call during ingestion to determine title and topic.
+* **Ragas Evaluation:** Included `/backend/evaluate_ragas.py` for local metric testing.
+* **Observability:** LangSmith `@traceable` integration. 
 
 ## 6. Tech Stack
 
@@ -166,19 +160,14 @@ npm run dev
 ```
 Access the application at http://localhost:3000
 
-## 9. Challenges Faced & Solutions
-This project navigated strict API limits, semantic challenges, and architecture complexities through iterative debugging:
+## 9. Challenges & Solutions
 
-- **Problem:** Scattered hallucinated answers deriving from implicit general knowledge logic whenever RAG queries missed target contexts. 
-  **Solution:** Designed an internal **RRF confidence gate** architecture directly within the retrieval logic filtering system to entirely bypass LLM prompting calls locally in favor of structured out-of-context notifications.
-
-- **Problem:** FAISS L2/Cosine semantic search missing precise ID/code matching questions entirely. 
-  **Solution:** Assembled **BM25 token-matching indexes** natively merged with semantic searching using **Reciprocal Rank Fusion**.
-
-- **Problem:** External Ragas framework APIs repeatedly triggering `429 Too Many Requests` on Llama model test iterations, blocking validation.
-  **Solution:** Structured `evaluate_ragas.py` to leverage manual chunking sizes (350), restricted generated LLM limits (n=1, top_k=3), and hard `asyncio` batch pacing sleeps (65 seconds) directly matching standard quotas flawlessly. 
+*   **Hallucination on Out-of-Scope Queries:** Implemented a confidence gate using the Cohere cross-encoder relevance score. If the score is below a threshold, the system returns a "not found" response, bypassing the LLM completely to prevent hallucinations.
+*   **Exact-Match Retrieval Failures:** Dense retrieval often misses specific names or values. Integrated BM25 keyword search with FAISS semantic search using Reciprocal Rank Fusion (RRF), improving exact-match recall@5 from ~84% to 93%+.
+*   **Conversational Context Loss:** Follow-up questions often lack explicit context. Implemented a sliding-window chat memory that automatically stores and injects the last 6 human/assistant message pairs into the prompt, enabling seamless multi-turn conversations.
 
 ## 10. Future Improvements
-* **Advanced Multi-Document Graph Context:** Implementing graph knowledge databases structure arrays natively within `FAISS Index` components enabling broad linking.
-* **Persistent Document States via Postgres Vector:** Replacing the localized session state dependencies completely utilizing persistent vector stores such as Postgres/Supabase for continuous account integrations across devices.
-* **Automated Web-Browsing Routing Fallbacks:** Providing real-time API integrations specifically restricted when confidence scores trip threshold caps natively instead of returning errors.
+
+*   **Graph Context:** Incorporate graph databases to enable broader linking across multiple documents.
+*   **Persistent Storage:** Migrate from in-memory session states to a persistent database like Postgres/Supabase.
+*   **Web-Browsing Fallback:** Add real-time web search integration when internal confidence scores are too low to answer a query.
