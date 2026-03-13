@@ -127,7 +127,6 @@ pdf-reader/
 Rename `backend/.env.example` to `backend/.env` and inject your keys:
 ```env
 GROQ_API_KEY=your_groq_api_key_here
-HF_API_KEY=your_hf_api_key_here
 COHERE_API_KEY=your_cohere_api_key_here
 LANGCHAIN_API_KEY=your_langsmith_key_here
 ```
