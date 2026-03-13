@@ -225,7 +225,7 @@ async def ingest_pdf(
 
         # 7. Embed all chunks via HuggingFace Inference API (batched, L2-normalised)
         texts = [c.text for c in chunk_metas]
-        logger.info(f"Embedding {len(texts)} chunks via HF API...")
+        logger.info(f"Embedding {len(texts)} chunks via embedding model...")
         embeddings = embed_texts(texts)
 
         # 8. Build FAISS IndexFlatIP (cosine similarity via normalised vectors)

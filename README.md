@@ -2,7 +2,7 @@
 
 ## Table of Contents
 - [Summary](#1-introduction)
-- [Demo Video](#2-demo-video)
+- [Architecture diagram](#2-architecture-diagram)
 - [Performance & Architecture Highlights](#3-performance--architecture-highlights)
 - [Architecture Diagram](#4-architecture-diagram)
 - [Features](#5-features)
@@ -20,10 +20,9 @@ Built with **Next.js 14**, **FastAPI**, and **Groq Llama 3**, the system impleme
 
 Key capabilities include sentence-aware NLTK chunking, intelligent confidence gating to prevent hallucinations, sliding-window conversation memory, and end-to-end telemetry via LangSmith.
 
-## 2. Demo Video
+## 2. Architecture diagram
 
-<!-- Demo video will be added here -->
-[*Demo video placeholder - to be added*]
+![Architecture-diagram](docs/Arch.png)
 
 ## 3. Performance & Architecture Highlights
 

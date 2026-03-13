@@ -1,6 +1,6 @@
 """
 Retrieval pipeline:
-  query embed (HF API) → FAISS cosine search (top-k)
+  query embed → FAISS cosine search (top-k)
                         + BM25 keyword search (top-k)
   → Reciprocal Rank Fusion (RRF)
   → confidence check

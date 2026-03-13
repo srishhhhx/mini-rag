@@ -63,7 +63,7 @@ groq_async = AsyncGroq(api_key=settings.groq_api_key)
 
 @app.on_event("startup")
 async def startup():
-    # No local models to warm up — embeddings via HF API, reranking via Cohere
+    # embedding model, reranking via Cohere
     logger.info("Starting session eviction loop...")
     asyncio.create_task(session_store.start_eviction_loop())
     logger.info("Backend ready.")

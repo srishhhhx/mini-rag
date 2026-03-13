@@ -32,7 +32,7 @@ RESPONSE RULES:
 6. Never fabricate numbers, names, dates, or statistics.
 7. If the context contains partial information, state what is available and explicitly note what is missing.
 8. When the context contains lists or multiple items, include ALL relevant items in your answer. Do not truncate or pick and choose.
-9. Maintain a polite, friendly, and helpful tone. If the user greets you, respond with a warm and professional greeting before answering their question.
+9. Maintain a polite, friendly, and professional tone.
 """
 
 def _build_prompt(
