@@ -35,6 +35,10 @@ class ChatMemory:
     def clear(self):
         self._history = []
 
+    def get_last_assistant(self) -> str:
+        """Return the last assistant message if available, else empty string."""
+        return self._history[-1].assistant if self._history else ""
+
     def __len__(self) -> int:
         return len(self._history)
 

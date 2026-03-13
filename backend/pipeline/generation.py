@@ -96,12 +96,7 @@ async def generate_streaming(
       data: {"done": true, "sources": [...], "confident": bool}\n\n   ← final event
     """
     # Low-confidence: skip LLM entirely
-    is_greeting = query.strip().lower() in [
-        "hi", "hello", "hey", "greetings", "good morning", 
-        "good afternoon", "good evening", "hi there", "hey there", "hola"
-    ]
-    
-    if not retrieval.confident and not is_greeting:
+    if not retrieval.confident:
         yield f"data: {json.dumps({'token': LOW_CONFIDENCE_RESPONSE})}\n\n"
         sources = _build_sources(retrieval)
         yield f"data: {json.dumps({'done': True, 'sources': sources, 'confident': False})}\n\n"
@@ -111,9 +106,6 @@ async def generate_streaming(
     # Build prompt
     history_str = memory.format()
     messages = _build_prompt(query, retrieval.chunks, history_str, doc_title)
-    
-    # Extract user content from the prompt
-    user_content = next(m["content"] for m in messages if m["role"] == "user")
 
     full_response = ""
     settings = get_settings()
@@ -163,7 +155,7 @@ async def generate_streaming(
 
     # Final SSE event with sources
     sources = _build_sources(retrieval)
-    yield f"data: {json.dumps({'done': True, 'sources': sources, 'confident': True})}\n\n"
+    yield f"data: {json.dumps({'done': True, 'sources': sources, 'confident': retrieval.confident})}\n\n"
 
 
 def _build_sources(retrieval: RetrievalResult) -> list[dict]:

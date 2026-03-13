@@ -1,7 +1,7 @@
 """
 Ingestion pipeline:
   PDF parse → sentence-aware chunk → regex metadata → doc-level Groq metadata
-  → embed (HuggingFace Inference API) → FAISS IndexFlatIP + BM25Okapi
+  → embed ( local SentenceTransformers) → FAISS IndexFlatIP + BM25Okapi
 """
 
 import io
@@ -15,8 +15,9 @@ import faiss
 import nltk
 import numpy as np
 from groq import Groq
-# from huggingface_hub import InferenceClient
 from sentence_transformers import SentenceTransformer
+from rank_bm25 import BM25Okapi
+from langsmith import traceable
 from rank_bm25 import BM25Okapi
 from langsmith import traceable
 
@@ -69,6 +70,12 @@ def embed_texts(texts: list[str]) -> np.ndarray:
     arr = client.encode(texts, convert_to_numpy=True, normalize_embeddings=True)
     
     return np.array(arr, dtype="float32")
+
+
+def tokenize_for_bm25(text: str) -> list[str]:
+    """Tokenize text for BM25, preserving hyphenated words and dropping single chars."""
+    tokens = re.findall(r'\b\w+(?:-\w+)*\b', text.lower())
+    return [t for t in tokens if len(t) > 1]
 
 
 # ── Sentence-aware chunker ────────────────────────────────────────────────────
@@ -223,21 +230,25 @@ async def ingest_pdf(
         session.doc_title = meta.get("title")
         session.doc_topic = meta.get("topic")
 
-        # 7. Embed all chunks via HuggingFace Inference API (batched, L2-normalised)
+        # 7. Explicit chunk count matching status schema
+        logger.info(f"Created {len(chunk_metas)} chunks from {session.page_count} pages")
+        session.chunk_count = len(chunk_metas)
+
+        # 8. Embed all chunks via local SentenceTransformers (batched, L2-normalised)
         texts = [c.text for c in chunk_metas]
         logger.info(f"Embedding {len(texts)} chunks via embedding model...")
         embeddings = embed_texts(texts)
 
-        # 8. Build FAISS IndexFlatIP (cosine similarity via normalised vectors)
+        # 9. Build FAISS IndexFlatIP (cosine similarity via normalised vectors)
         dim = embeddings.shape[1]
         faiss_index = faiss.IndexFlatIP(dim)
         faiss_index.add(embeddings)
 
-        # 9. Build BM25 index (keyword search)
-        tokenized_texts = [text.lower().split() for text in texts]
+        # 10. Build BM25 index (keyword search) using consistent tokenizer
+        tokenized_texts = [tokenize_for_bm25(text) for text in texts]
         bm25_index = BM25Okapi(tokenized_texts)
 
-        # 10. Commit to session
+        # 11. Commit to session
         session.chunks = chunk_metas
         session.faiss_index = faiss_index
         session.bm25_index = bm25_index
@@ -253,3 +264,7 @@ async def ingest_pdf(
         logger.exception("Ingestion failed")
         session.status = "error"
         session.error_message = f"Ingestion failed: {str(e)}"
+        # Clean up any partial state
+        session.faiss_index = None
+        session.bm25_index = None
+        session.chunks = []

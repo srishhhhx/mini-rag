@@ -64,11 +64,9 @@ class RetrievalResult:
 
 
 def build_retrieval_query(question: str, session: SessionData) -> str:
-    history = session.chat_memory._history
-    if not history:
+    last_answer = session.chat_memory.get_last_assistant()
+    if not last_answer:
         return question
-    # append the last assistant turn to the query for context
-    last_answer = history[-1].assistant if history else ""
     return f"{question} {last_answer}"[:512]  # cap length
 
 
@@ -96,7 +94,8 @@ def retrieve(query: str, session: SessionData) -> RetrievalResult:
     faiss_idxs = [i for i in faiss_idxs[0].tolist() if i >= 0]
 
     # 3. BM25 keyword search
-    tokenized_query = expanded_query.lower().split()
+    from pipeline.ingestion import tokenize_for_bm25
+    tokenized_query = tokenize_for_bm25(expanded_query)
     bm25_scores_all = session.bm25_index.get_scores(tokenized_query)
     bm25_ranked = sorted(
         range(len(bm25_scores_all)), key=lambda i: bm25_scores_all[i], reverse=True
@@ -116,36 +115,27 @@ def retrieve(query: str, session: SessionData) -> RetrievalResult:
     # 5. Cohere reranking + confidence via Cohere relevance score
     candidates = [(idx, session.chunks[idx]) for idx, _ in merged]
 
-    confident = False
-    if len(candidates) > 1:
-        try:
-            co = get_cohere_client()
-            rerank_response = co.rerank(
-                query=expanded_query,
-                documents=[chunk.text for _, chunk in candidates],
-                model="rerank-v3.5",
-                top_n=top_rerank,
-            )
-            # Map back from rerank result indices to original candidates
-            top_chunks = [candidates[r.index][1] for r in rerank_response.results]
-            top_scores = [r.relevance_score for r in rerank_response.results]
-            # Confidence = best Cohere score above threshold
-            # Cohere scores: ~0.02 for irrelevant, 0.3–0.9 for relevant
-            confident = top_scores[0] >= settings.confidence_threshold
-        except Exception as e:
-            # Graceful fallback: RRF order, use best RRF score for confidence
-            logger.warning(f"Cohere rerank failed, falling back to RRF order: {e}")
-            top_chunks = [chunk for _, chunk in candidates[:top_rerank]]
-            top_scores = [score for _, score in merged[:top_rerank]]
-            best_rrf_score = merged[0][1] if merged else 0.0
-            confident = best_rrf_score >= 0.015   # RRF fallback threshold
-    elif len(candidates) == 1:
-        top_chunks = [chunk for _, chunk in candidates]
-        top_scores = [merged[0][1]]
-        confident = merged[0][1] >= 0.015
-    else:
-        top_chunks = []
-        top_scores = []
-        confident = False
+    if not candidates:
+        return RetrievalResult(chunks=[], scores=[], confident=False)
+
+    try:
+        co = get_cohere_client()
+        rerank_response = co.rerank(
+            query=expanded_query,
+            documents=[chunk.text for _, chunk in candidates],
+            model="rerank-v3.5",
+            top_n=min(top_rerank, len(candidates)),
+        )
+        # Map back from rerank result indices to original candidates
+        top_chunks = [candidates[r.index][1] for r in rerank_response.results]
+        top_scores = [r.relevance_score for r in rerank_response.results]
+        # Confidence = best Cohere score above threshold
+        # Cohere scores: ~0.02 for irrelevant, 0.3–0.9 for relevant
+        confident = top_scores[0] >= settings.confidence_threshold
+    except Exception as e:
+        logger.warning(f"Cohere rerank failed: {e}")
+        top_chunks = [chunk for _, chunk in candidates[:top_rerank]]
+        top_scores = [score for _, score in merged[:top_rerank]]
+        confident = False  # honest fallback
 
     return RetrievalResult(chunks=top_chunks, scores=top_scores, confident=confident)

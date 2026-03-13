@@ -12,10 +12,11 @@ import asyncio
 import logging
 import os
 import uuid
+import json
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from groq import AsyncGroq, Groq
 
 from config import get_settings
@@ -28,7 +29,7 @@ from models import (
 from pipeline.generation import generate_streaming
 from pipeline.ingestion import ingest_pdf
 from pipeline.retrieval import retrieve
-from pipeline.session import session_store
+from pipeline.session import session_store, SessionNotFoundError
 
 logging.basicConfig(
     level=logging.INFO,
@@ -53,6 +54,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(SessionNotFoundError)
+async def session_not_found_handler(request, exc: SessionNotFoundError):
+    return JSONResponse(
+        status_code=404,
+        content={"detail": "Session not found or expired. Please re-upload your document."}
+    )
 
 # ── Clients & Observability (shared, thread-safe) ───────────────────────────
 groq_sync = Groq(api_key=settings.groq_api_key)
@@ -91,7 +99,7 @@ async def upload_pdf(
         raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
     # Create/reset session — clears previous document and history
-    session = session_store.create(session_id)
+    session = await session_store.create(session_id)
 
     # Run ingestion in background so we can return immediately
     background_tasks.add_task(
@@ -107,7 +115,7 @@ async def upload_pdf(
 
 async def _run_ingestion_sync(file_bytes: bytes, session_id: str):
     """Wrapper to run async ingestion and handle top-level errors."""
-    session = session_store.get(session_id)
+    session = await session_store.get(session_id)
     if not session:
         logger.warning(f"Session {session_id} disappeared before ingestion started.")
         return
@@ -117,9 +125,7 @@ async def _run_ingestion_sync(file_bytes: bytes, session_id: str):
 @app.get("/session/{session_id}/status", response_model=SessionStatusResponse)
 async def get_session_status(session_id: str):
     """Poll this endpoint to check ingestion progress."""
-    session = session_store.get(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found.")
+    session = await session_store.get_or_raise(session_id)
 
     return SessionStatusResponse(
         status=session.status,
@@ -131,6 +137,10 @@ async def get_session_status(session_id: str):
     )
 
 
+GREETINGS = {"hi", "hello", "hey", "greetings", "hola", 
+             "good morning", "good afternoon", "good evening",
+             "hi there", "hey there"}
+
 @app.post("/chat")
 async def chat(request: ChatRequest):
     """
@@ -140,9 +150,7 @@ async def chat(request: ChatRequest):
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
 
-    session = session_store.get(request.session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found. Please upload a document first.")
+    session = await session_store.get_or_raise(request.session_id)
 
     if session.status == "processing":
         raise HTTPException(status_code=409, detail="Document is still being processed. Please wait.")
@@ -155,6 +163,22 @@ async def chat(request: ChatRequest):
 
     if session.status != "ready" or not session.faiss_index:
         raise HTTPException(status_code=404, detail="No document found in this session. Please upload a PDF first.")
+
+    # Handle greetings before pipeline
+    if request.question.strip().lower() in GREETINGS:
+        async def greeting_stream():
+            doc = session.doc_title or "your document"
+            msg = f"Hello! I'm ready to answer questions about {doc}. What would you like to know?"
+            yield f"data: {json.dumps({'token': msg})}\n\n"
+            yield f"data: {json.dumps({'done': True, 'sources': [], 'confident': True})}\n\n"
+        return StreamingResponse(
+            greeting_stream(), 
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+            }
+        )
 
     # Retrieval (sync, fast)
     try:
@@ -182,7 +206,7 @@ async def chat(request: ChatRequest):
 @app.delete("/session/{session_id}", response_model=DeleteSessionResponse)
 async def delete_session(session_id: str):
     """Explicitly clean up a session and free memory."""
-    deleted = session_store.delete(session_id)
+    deleted = await session_store.delete(session_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Session not found.")
     return DeleteSessionResponse(status="deleted", session_id=session_id)

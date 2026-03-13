@@ -1,4 +1,4 @@
-# Advanced Multi-Document Adaptive RAG Agent
+# Mini-rag
 
 ## Table of Contents
 - [Summary](#1-introduction)

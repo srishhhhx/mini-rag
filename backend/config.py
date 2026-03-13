@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     confidence_threshold: float = 0.4
 
     # Chunking
-    chunk_size: int = 500
+    chunk_size: int = 2000  # characters, ~500 tokens
 
     # CORS
     frontend_url: str = "http://localhost:3000"
