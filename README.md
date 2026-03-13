@@ -4,7 +4,7 @@
 - [Summary](#1-introduction)
 - [Architecture diagram](#2-architecture-diagram)
 - [Performance & Architecture Highlights](#3-performance--architecture-highlights)
-- [Architecture Diagram](#4-architecture-diagram)
+- [Chat interface](#4-chat-interface)
 - [Features](#5-features)
 - [Tech Stack](#6-tech-stack)
 - [Project Structure](#7-project-structure)
@@ -50,43 +50,9 @@ This agent was engineered for extreme performance and reliability, achieving sig
 
 * **Sentence-Aware NLP Chunking:** Ingested documentation chunks via PyMuPDF layered atop **NLTK sentence tokenization** over arbitrary character splitting, ensuring semantic boundaries never split mid-sentence, enabling much cleaner downstream local generic embeddings. 
 
-## 4. Architecture Diagram
+## 4. Chat interface
 
-```text
-                                       ┌─────────────────────────┐
-                                       │     Next.js 14 UI       │
-                                       │ (Upload, Chat, Sources) │
-                                       └───────────┬─────────────┘
-                                                   │
-   ┌───────────────────────────────────────────────┴─────────────────────────────────────────┐
-   │                                   FastAPI Backend                                       │
-   │                                                                                         │
-   │   ┌────────────────────────┐                             ┌────────────────────────┐     │
-   │   │     1. INGESTION       │                             │      3. GENERATION     │     │
-   │   │                        │                             │                        │     │
-   │   │  ┌──────────────────┐  │                             │  ┌──────────────────┐  │     │
-   │   │  │ PyMuPDF Parsing  │  │                             │  │  Sliding Window  │  │     │
-   │   │  │ NLTK Chunking    │  │                             │  │  Memory (N=6)    │  │     │
-   │   │  └────────┬─────────┘  │                             │  └────────┬─────────┘  │     │
-   │   │           │            │                             │           │            │     │
-   │   │  ┌────────▼─────────┐  │      ┌───────────────┐      │  ┌────────▼─────────┐  │     │
-   │   │  │ all-MiniLM-L6-v2 │  │      │ 2. RETRIEVAL  │      │  │ Prompt Injection │  │     │
-   │   │  │ Local Embeddings │  │      │               │      │  │ + Formatting     │  │     │
-   │   │  └────────┬─────────┘  │      │               │      │  └────────┬─────────┘  │     │
-   │   │           │            │      │               │      │           │            │     │
-   │   │  ┌────────▼─────────┐  │      │               │      │  ┌────────▼─────────┐  │     │
-   │   │  │FAISS IndexFlatIP │◄─┼──────┤ Hybrid Search ├──────┼─►│   Groq Llama 3   │  │     │
-   │   │  │   + rank_bm25    │  │      │ + RRF Fusion  │      │  │  70B / 8B Stream │  │     │
-   │   │  └──────────────────┘  │      │ + Cohere Rank │      │  └──────────────────┘  │     │
-   │   └────────────────────────┘      └───────────────┘      └────────────────────────┘     │
-   │                                                                                         │
-   └───────────────────────────────────────────────┬─────────────────────────────────────────┘
-                                                   │
-                                     ┌─────────────▼─────────────┐
-                                     │        LangSmith          │
-                                     │ (Tracing & Observability) │
-                                     └───────────────────────────┘
-```
+![Chat interface](docs/Chat-interface.png)
 
 ## 5. Features
 
