@@ -16,7 +16,6 @@ import uuid
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from google import genai
 from groq import AsyncGroq, Groq
 
 from config import get_settings
@@ -56,7 +55,6 @@ app.add_middleware(
 )
 
 # ── Clients & Observability (shared, thread-safe) ───────────────────────────
-genai_client = genai.Client()
 groq_sync = Groq(api_key=settings.groq_api_key)
 groq_async = AsyncGroq(api_key=settings.groq_api_key)
 
@@ -171,7 +169,6 @@ async def chat(request: ChatRequest):
             retrieval=retrieval_result,
             memory=session.chat_memory,
             groq_client=groq_async,
-            genai_client=genai_client,
             doc_title=session.doc_title,
         ),
         media_type="text/event-stream",

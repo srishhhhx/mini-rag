@@ -85,8 +85,8 @@ async def generate_streaming(
     retrieval: RetrievalResult,
     memory: ChatMemory,
     groq_client: AsyncGroq,
-    genai_client: "google.genai.Client",
     doc_title: str | None = None,
+    max_tokens: int = 1024,
 ) -> AsyncGenerator[str, None]:
     """
     Async generator that yields Server-Sent Events (SSE) strings.
@@ -119,23 +119,21 @@ async def generate_streaming(
     settings = get_settings()
 
     try:
-        from google.genai import types
-        # Use genai natively
-        model = settings.gemini_model_primary
-        stream = await genai_client.aio.models.generate_content_stream(
+        # Use Groq primary
+        model = settings.groq_model_primary
+        stream = await groq_client.chat.completions.create(
             model=model,
-            contents=[types.Content(role="user", parts=[types.Part.from_text(text=user_content)])],
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                temperature=0.2,
-                max_output_tokens=1024,
-            ),
+            messages=messages,
+            temperature=0.2,
+            max_tokens=max_tokens,
+            stream=True,
         )
 
         async for chunk in stream:
-            if chunk.text:
-                full_response += chunk.text
-                yield f"data: {json.dumps({'token': chunk.text})}\n\n"
+            delta = chunk.choices[0].delta.content
+            if delta:
+                full_response += delta
+                yield f"data: {json.dumps({'token': delta})}\n\n"
 
     except Exception as e:
         logger.warning(f"Primary model failed ({e}), falling back to {settings.groq_model_fallback}")

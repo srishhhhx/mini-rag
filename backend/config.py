@@ -11,13 +11,10 @@ _ENV_FILE = _PROJECT_ROOT / ".env"
 load_dotenv(_ENV_FILE)
 
 class Settings(BaseSettings):
-    # Gemini LLM (Primary)
-    gemini_api_key: str
-    gemini_model_primary: str = "gemini-2.5-flash"
-
-    # Groq LLM (Fallback)
+    # Groq LLM
     groq_api_key: str
-    groq_model_fallback: str = "llama-3.3-70b-versatile"
+    groq_model_primary: str = "llama-3.3-70b-versatile"
+    groq_model_fallback: str = "llama-3.1-8b-instant"
 
     # Embedding (HuggingFace Inference API)
     hf_api_key: str

@@ -1,0 +1,10 @@
+{
+  "faithfulness": 0.891,
+  "answer_relevancy": 0.8801,
+  "context_precision": 0.9103,
+  "context_recall": 0.8321,
+  "samples_evaluated": 15,
+  "model": "llama-3.3-70b-versatile",
+  "critic_model": "llama-3.3-70b-versatile",
+  "embed_model": "sentence-transformers/all-MiniLM-L6-v2"
+}

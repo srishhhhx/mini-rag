@@ -33,4 +33,3 @@ langsmith==0.3.11
 
 # Numerical computing
 numpy==2.2.3
-google-genai==0.3.0
